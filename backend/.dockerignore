@@ -1,0 +1,20 @@
+# Python artifacts
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.pytest_cache/
+
+# Runtime data (mounted as Docker volume)
+data/output/
+logs/
+
+# Secrets
+.env
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+

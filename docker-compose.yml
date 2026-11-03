@@ -1,15 +1,17 @@
-version: "3.9"
-
 services:
+  # ── PostgreSQL with named volume ──────────────────────────────────────────────
   postgres:
     image: postgres:15-alpine
     container_name: ledgersync_postgres
+    restart: unless-stopped
     environment:
       POSTGRES_USER: ledger
       POSTGRES_PASSWORD: ledgerpass
       POSTGRES_DB: bank_reconciliation
     volumes:
+      # Named volume — persists the DB across container restarts/rebuilds
       - ledgersync_pgdata:/var/lib/postgresql/data
+      # Init scripts: run once on a fresh (empty) volume
       - ./backend/sql:/docker-entrypoint-initdb.d:ro
     ports:
       - "5432:5432"
@@ -19,38 +21,51 @@ services:
       timeout: 5s
       retries: 5
 
+  # ── FastAPI backend ───────────────────────────────────────────────────────────
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: ledgersync_backend
+    restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
     environment:
+      # DB connection via Docker internal network (postgres = service name)
       DATABASE_URL: postgresql+psycopg2://ledger:ledgerpass@postgres:5432/bank_reconciliation
       UPLOAD_DIR: /app/data/input
       OUTPUT_DIR: /app/data/output
+      LOG_DIR: /app/logs
     volumes:
+      # Named volume for uploaded CSVs and ETL output reports
       - ledgersync_data:/app/data
     ports:
       - "8000:8000"
 
+  # ── Next.js frontend ──────────────────────────────────────────────────────────
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        # NEXT_PUBLIC_* variables are embedded in the browser bundle at BUILD time.
+        # The browser runs on the HOST machine, not inside Docker, so it must reach
+        # the backend via the host-mapped port (localhost:8000), NOT the Docker
+        # internal hostname (backend:8000).
+        NEXT_PUBLIC_API_URL: http://localhost:8000
     container_name: ledgersync_frontend
+    restart: unless-stopped
     depends_on:
       - backend
-    environment:
-      NEXT_PUBLIC_API_URL: http://localhost:8000
     ports:
       - "3000:3000"
 
+# ── Named volumes ─────────────────────────────────────────────────────────────
 volumes:
+  # PostgreSQL data — survives container restarts and image rebuilds
   ledgersync_pgdata:
     driver: local
+  # Shared data volume between backend service and host (uploaded files, reports)
   ledgersync_data:
     driver: local
-

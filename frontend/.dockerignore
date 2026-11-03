@@ -1,0 +1,13 @@
+node_modules/
+.next/
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+*.md
+
