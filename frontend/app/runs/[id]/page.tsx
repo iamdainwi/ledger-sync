@@ -1,9 +1,23 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
-import { getRun, getExceptions, getDailySummary, type RunSummary, type ExceptionRow, type DailySummaryRow } from "@/lib/api";
+import { useEffect, useState, Suspense } from "react";
+import { useParams } from "next/navigation";
+import {
+  getRun,
+  getExceptions,
+  getDailySummary,
+  type RunSummary,
+  type ExceptionRow,
+  type DailySummaryRow,
+} from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
@@ -15,6 +29,23 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  ChartConfig,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+} from "@/components/ui/chart";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  Line,
+  LineChart,
+} from "recharts";
 
 function statusVariant(status: string): "default" | "secondary" | "destructive" | "outline" {
   if (status === "SUCCESS") return "default";
@@ -53,8 +84,43 @@ function StatCard({ label, value }: { label: string; value: number | null }) {
   );
 }
 
-export default function RunDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+// Chart Configurations using default shadcn theme variables
+const outcomeChartConfig = {
+  count: {
+    label: "Records",
+    color: "var(--chart-1)",
+  },
+} satisfies ChartConfig;
+
+const dailyVolumeChartConfig = {
+  source: {
+    label: "Source",
+    color: "var(--chart-1)",
+  },
+  settlement: {
+    label: "Settlement",
+    color: "var(--chart-2)",
+  },
+  matched: {
+    label: "Matched",
+    color: "var(--chart-3)",
+  },
+} satisfies ChartConfig;
+
+const dailyAmountChartConfig = {
+  sourceAmount: {
+    label: "Source (INR)",
+    color: "var(--chart-1)",
+  },
+  settlementAmount: {
+    label: "Settlement (INR)",
+    color: "var(--chart-2)",
+  },
+} satisfies ChartConfig;
+
+function RunDetailContent() {
+  const params = useParams();
+  const id = typeof params?.id === "string" ? params.id : Array.isArray(params?.id) ? params.id[0] : "";
   const [run, setRun] = useState<RunSummary | null>(null);
   const [exceptions, setExceptions] = useState<ExceptionRow[]>([]);
   const [dailySummary, setDailySummary] = useState<DailySummaryRow[]>([]);
@@ -110,6 +176,34 @@ export default function RunDetailPage({ params }: { params: Promise<{ id: string
       </div>
     );
   }
+
+  // Prepared chart data
+  const outcomeData = run
+    ? [
+        { category: "Matched", count: run.matched_count ?? 0, fill: "var(--chart-1)" },
+        { category: "Amt Mismatch", count: run.amount_mismatch_count ?? 0, fill: "var(--chart-2)" },
+        { category: "Detail Mismatch", count: run.detail_mismatch_count ?? 0, fill: "var(--chart-3)" },
+        { category: "Missing in Set", count: run.missing_in_settlement_count ?? 0, fill: "var(--chart-4)" },
+        { category: "Missing in Src", count: run.missing_in_source_count ?? 0, fill: "var(--chart-5)" },
+        { category: "Invalid Rows", count: run.validation_error_count ?? 0, fill: "var(--destructive)" },
+        { category: "Duplicates", count: run.duplicate_id_count ?? 0, fill: "var(--destructive)" },
+      ]
+    : [];
+
+  const dailyVolumeData = dailySummary.map((d) => ({
+    date: d.transaction_date.slice(5), // MM-DD for cleaner ticks
+    fullDate: d.transaction_date,
+    source: d.source_record_count,
+    settlement: d.settlement_record_count,
+    matched: d.matched_count,
+  }));
+
+  const dailyAmountData = dailySummary.map((d) => ({
+    date: d.transaction_date.slice(5),
+    fullDate: d.transaction_date,
+    sourceAmount: Number(d.source_amount_total ?? 0),
+    settlementAmount: Number(d.settlement_amount_total ?? 0),
+  }));
 
   return (
     <div className="space-y-6">
@@ -179,7 +273,185 @@ export default function RunDetailPage({ params }: { params: Promise<{ id: string
 
       <Separator />
 
-      {/* Tabs */}
+      {/* Visual Charts & Graphs Section */}
+      <div className="space-y-4">
+        <div>
+          <h2 className="text-lg font-semibold tracking-tight">Visual Analysis</h2>
+          <p className="text-xs text-muted-foreground">
+            Graphical breakdown of reconciliation outcomes and daily settlement trends.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Outcome Breakdown Chart */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">
+                Reconciliation Outcomes Breakdown
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Distribution of matched vs exception categories.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <Skeleton className="h-[260px] w-full" />
+              ) : (
+                <ChartContainer
+                  config={outcomeChartConfig}
+                  className="h-[260px] w-full"
+                >
+                  <BarChart
+                    data={outcomeData}
+                    layout="vertical"
+                    margin={{ left: 16, right: 16, top: 8, bottom: 8 }}
+                  >
+                    <CartesianGrid horizontal={false} />
+                    <XAxis type="number" />
+                    <YAxis
+                      dataKey="category"
+                      type="category"
+                      tickLine={false}
+                      axisLine={false}
+                      width={95}
+                      className="text-[11px]"
+                    />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Bar dataKey="count" radius={4} />
+                  </BarChart>
+                </ChartContainer>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Daily Record Volume Chart */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">
+                Daily Transaction Volume
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Comparison of source, settlement, and matched records per date.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <Skeleton className="h-[260px] w-full" />
+              ) : dailyVolumeData.length === 0 ? (
+                <div className="h-[260px] flex items-center justify-center text-xs text-muted-foreground">
+                  No daily data available
+                </div>
+              ) : (
+                <ChartContainer
+                  config={dailyVolumeChartConfig}
+                  className="h-[260px] w-full"
+                >
+                  <BarChart
+                    data={dailyVolumeData}
+                    margin={{ left: 8, right: 8, top: 8, bottom: 8 }}
+                  >
+                    <CartesianGrid vertical={false} />
+                    <XAxis
+                      dataKey="date"
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={8}
+                    />
+                    <YAxis tickLine={false} axisLine={false} width={30} />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <ChartLegend content={<ChartLegendContent />} />
+                    <Bar dataKey="source" fill="var(--color-source)" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="settlement" fill="var(--color-settlement)" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="matched" fill="var(--color-matched)" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ChartContainer>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Daily Amount Trend (Full width on large screens) */}
+          <Card className="lg:col-span-2">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">
+                Financial Amount Reconciliation Trend (INR)
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Total transacted currency amounts between source and settlement across dates.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <Skeleton className="h-[240px] w-full" />
+              ) : dailyAmountData.length === 0 ? (
+                <div className="h-[240px] flex items-center justify-center text-xs text-muted-foreground">
+                  No financial data available
+                </div>
+              ) : (
+                <ChartContainer
+                  config={dailyAmountChartConfig}
+                  className="h-[240px] w-full"
+                >
+                  <LineChart
+                    data={dailyAmountData}
+                    margin={{ left: 16, right: 16, top: 8, bottom: 8 }}
+                  >
+                    <CartesianGrid vertical={false} />
+                    <XAxis
+                      dataKey="date"
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={8}
+                    />
+                    <YAxis
+                      tickLine={false}
+                      axisLine={false}
+                      width={65}
+                      tickFormatter={(val) => `₹${(val / 1000).toFixed(0)}k`}
+                    />
+                    <ChartTooltip
+                      content={
+                        <ChartTooltipContent
+                          formatter={(value, name) => (
+                            <div className="flex items-center justify-between gap-2 w-full">
+                              <span className="text-muted-foreground">{name}:</span>
+                              <span className="font-mono font-medium">
+                                ₹{Number(value).toLocaleString("en-IN", {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                })}
+                              </span>
+                            </div>
+                          )}
+                        />
+                      }
+                    />
+                    <ChartLegend content={<ChartLegendContent />} />
+                    <Line
+                      type="monotone"
+                      dataKey="sourceAmount"
+                      stroke="var(--color-sourceAmount)"
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="settlementAmount"
+                      stroke="var(--color-settlementAmount)"
+                      strokeWidth={2}
+                      strokeDasharray="4 4"
+                      dot={false}
+                    />
+                  </LineChart>
+                </ChartContainer>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      <Separator />
+
+      {/* Tables Tabs */}
       <Tabs defaultValue="exceptions">
         <TabsList>
           <TabsTrigger value="exceptions">
@@ -316,3 +588,18 @@ export default function RunDetailPage({ params }: { params: Promise<{ id: string
   );
 }
 
+export default function RunDetailPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="space-y-6">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-64 w-full" />
+        </div>
+      }
+    >
+      <RunDetailContent />
+    </Suspense>
+  );
+}

@@ -3,10 +3,23 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { listRuns, type RunListItem } from "@/lib/api";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
+import {
+  ChartConfig,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
 function statusVariant(status: string): "default" | "secondary" | "destructive" | "outline" {
   if (status === "SUCCESS") return "default";
@@ -18,6 +31,13 @@ function formatDate(iso: string | null): string {
   if (!iso) return "—";
   return new Date(iso).toLocaleString();
 }
+
+const runStatusChartConfig = {
+  count: {
+    label: "Runs",
+    color: "var(--chart-1)",
+  },
+} satisfies ChartConfig;
 
 export default function DashboardPage() {
   const [runs, setRuns] = useState<RunListItem[]>([]);
@@ -36,6 +56,12 @@ export default function DashboardPage() {
   const failed = runs.filter((r) => r.status === "FAILED").length;
   const running = runs.filter((r) => r.status === "RUNNING").length;
   const recent = runs.slice(0, 5);
+
+  const statusChartData = [
+    { status: "Successful", count: successful, fill: "var(--chart-1)" },
+    { status: "Running", count: running, fill: "var(--chart-2)" },
+    { status: "Failed", count: failed, fill: "var(--destructive)" },
+  ];
 
   return (
     <div className="space-y-8">
@@ -71,6 +97,43 @@ export default function DashboardPage() {
           </Card>
         ))}
       </div>
+
+      {/* Graphical overview of execution health if runs exist */}
+      {!loading && runs.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Pipeline Execution Health</CardTitle>
+            <CardDescription className="text-xs">
+              Status distribution across all recorded reconciliation executions.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer
+              config={runStatusChartConfig}
+              className="h-[180px] w-full"
+            >
+              <BarChart
+                data={statusChartData}
+                layout="vertical"
+                margin={{ left: 16, right: 16, top: 8, bottom: 8 }}
+              >
+                <CartesianGrid horizontal={false} />
+                <XAxis type="number" allowDecimals={false} />
+                <YAxis
+                  dataKey="status"
+                  type="category"
+                  tickLine={false}
+                  axisLine={false}
+                  width={85}
+                  className="text-xs"
+                />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Bar dataKey="count" radius={4} />
+              </BarChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+      )}
 
       <Separator />
 
