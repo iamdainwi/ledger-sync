@@ -23,9 +23,10 @@ Financial institutions process high transaction volumes across multiple distribu
 
 ### 2.1 Core Capabilities
 - **Decimal-Safe Financial Arithmetic**: Uses Python's `Decimal` and PostgreSQL `NUMERIC(14,2)` to prevent binary floating-point rounding errors.
-- **Dual Operating Modes**:
+- **Multiple Operating Modes**:
   1. **CLI Execution**: Command-line orchestration (`python -m src.main`) for batch scheduling or terminal workflows.
   2. **Full-Stack Web App**: FastAPI REST API + Next.js frontend with Shadcn UI components.
+  3. **Streamlit Operational Dashboard**: Standalone dark fintech dashboard in `LedgerSync-Stremlit` with zero emojis, interactive Plotly charts, and single-command Docker deployment (`docker compose up --build`).
 - **Isolated Staging**: Preserves all raw input rows in `stg_transactions` and `stg_settlement` for diagnostics.
 - **Deterministic Synthetic Data Generator**: Generates 500+ reproducible banking rows seeded with specific discrepancies.
 
