@@ -1,4 +1,4 @@
-# Operating System
+# ── Operating System ───────────────────────────────────────────────────────────
 .DS_Store
 .DS_Store?
 ._*
@@ -7,16 +7,13 @@
 ehthumbs.db
 Thumbs.db
 
-# Environment Variables & Credentials
+# ── Environment Variables & Secrets ───────────────────────────────────────────
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*
 *.env
 !.env.example
 
-# Python
+# ── Python & Virtual Environments ─────────────────────────────────────────────
 __pycache__/
 *.py[cod]
 *$py.class
@@ -25,6 +22,7 @@ __pycache__/
 env/
 venv/
 .venv/
+*/.venv/
 ENV/
 build/
 develop-eggs/
@@ -44,8 +42,14 @@ wheels/
 .pytest_cache/
 .coverage
 htmlcov/
+.mypy_cache/
+.ruff_cache/
 
-# Node.js & Next.js
+# ── Streamlit (if Streamlit frontend is added) ────────────────────────────────
+.streamlit/secrets.toml
+*/.streamlit/secrets.toml
+
+# ── Node.js & Next.js ─────────────────────────────────────────────────────────
 node_modules/
 npm-debug.log*
 yarn-debug.log*
@@ -55,28 +59,44 @@ yarn-error.log*
 out/
 .turbo/
 
-# Logs & Pipeline Outputs
+# ── Logs & Pipeline Outputs ───────────────────────────────────────────────────
 logs/*
 !logs/.gitkeep
 backend/logs/*
 !backend/logs/.gitkeep
 *.log
 
-# ETL Data Output (Keep input test fixtures and .gitkeep, ignore generated runs)
+# ── ETL Staging & Pipeline Artifacts ──────────────────────────────────────────
+# Ignore generated report outputs while preserving .gitkeep
 data/output/*
 !data/output/.gitkeep
 backend/data/output/*
 !backend/data/output/.gitkeep
 
-# Database & Local dumps
+# Preserve baseline test fixtures
+!backend/data/input/transactions.csv
+!backend/data/input/settlement.csv
+!backend/data/input/.gitkeep
+!data/input/transactions.csv
+!data/input/settlement.csv
+!data/input/.gitkeep
+
+# ── Database & Local Dumps ────────────────────────────────────────────────────
 *.sqlite3
+*.sqlite
 *.db
 *.dump
 *.sql.gz
 
-# IDE / Editors
+# ── Docker Overrides ──────────────────────────────────────────────────────────
+docker-compose.override.yml
+*.local.yml
+
+# ── IDEs & Text Editors ───────────────────────────────────────────────────────
 .idea/
 .vscode/
 *.swp
 *.swo
-
+*~
+*.sublime-project
+*.sublime-workspace
