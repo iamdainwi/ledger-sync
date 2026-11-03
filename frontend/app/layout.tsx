@@ -24,35 +24,50 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-background text-foreground">
-        {/* Nav */}
-        <header className="border-b">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex h-14 items-center gap-6">
-            <Link href="/" className="font-semibold text-lg tracking-tight">
-              LedgerSync
-            </Link>
-            <nav className="flex gap-4 text-sm text-muted-foreground">
-              <Link href="/" className="hover:text-foreground transition-colors">
-                Dashboard
+      <body
+        className="min-h-full flex flex-col"
+        style={{ background: "var(--color-page)", color: "var(--color-ink)" }}
+      >
+        {/* ── Top bar ── */}
+        <header
+          className="sticky top-0 z-30 flex h-12 items-center gap-6 border-b px-6"
+          style={{
+            background: "var(--color-card)",
+            borderColor: "var(--color-line)",
+          }}
+        >
+          {/* Brand */}
+          <Link
+            href="/"
+            className="text-[15px] font-semibold tracking-tight"
+            style={{ color: "var(--color-ink)" }}
+          >
+            LedgerSync
+          </Link>
+
+          {/* Nav links */}
+          <nav className="flex items-center gap-1">
+            {[
+              { href: "/", label: "Dashboard" },
+              { href: "/run", label: "New Run" },
+              { href: "/runs", label: "History" },
+            ].map(({ href, label }) => (
+              <Link
+                key={href}
+                href={href}
+                className="rounded-md px-3 py-1.5 text-[13px] transition-colors hover:bg-[var(--color-soft)]"
+                style={{ color: "var(--color-ink-2)" }}
+              >
+                {label}
               </Link>
-              <Link href="/run" className="hover:text-foreground transition-colors">
-                New Run
-              </Link>
-              <Link href="/runs" className="hover:text-foreground transition-colors">
-                Run History
-              </Link>
-            </nav>
-          </div>
+            ))}
+          </nav>
         </header>
 
-        {/* Page content */}
-        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* ── Page content ── */}
+        <main className="flex-1 mx-auto w-full max-w-7xl px-6 py-8">
           {children}
         </main>
-
-        <footer className="border-t py-4 text-center text-xs text-muted-foreground">
-          LedgerSync — Mini Banking Transaction Reconciliation System
-        </footer>
       </body>
     </html>
   );
