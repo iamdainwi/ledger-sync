@@ -1,0 +1,20 @@
+# Environment & secrets
+.env
+*.env
+!.env.example
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+
+# Runtime logs & ETL output
+logs/*
+!logs/.gitkeep
+data/output/*
+!data/output/.gitkeep
+*.log
